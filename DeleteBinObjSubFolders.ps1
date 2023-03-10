@@ -5,6 +5,10 @@ param (
     [ValidateNotNullOrEmpty()]$path
 )
 
+$mypath = $MyInvocation.MyCommand.Path
+$workinFolder = Split-Path $mypath -Parent
+
 # Get-ChildItem -Path $path -Recurse -Force -Directory -Include 'bin', 'obj' | Remove-Item -Recurse -Confirm:$false -Force
-.\DeleteSubFolders.ps1 $path 'bin'
-.\DeleteSubFolders.ps1 $path 'obj'
+
+& $workinFolder\DeleteSubFolders.ps1 $path 'bin'
+& $workinFolder\DeleteSubFolders.ps1 $path 'obj'

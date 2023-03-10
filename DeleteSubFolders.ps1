@@ -5,7 +5,7 @@ param (
     [ValidateNotNullOrEmpty()]$path,
     [Parameter(Mandatory=$true)]
     [string]
-    [ValidateNotNullOrEmpty]$folder
+    [ValidateNotNullOrEmpty]$folderToRemove
 )
 
-Get-ChildItem -Path $path -Recurse -Force -Directory -Include $folder | Remove-Item -Recurse -Confirm:$false -Force
+Get-ChildItem -Path $path -Recurse -Force -Directory -Include $folderToRemove | Remove-Item -Recurse -Confirm:$false -Force
