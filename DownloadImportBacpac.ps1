@@ -1,13 +1,13 @@
 param (
-    [Parameter(Mandatory=$true)]
-    [string]$rutaDestino
+    [Parameter(Mandatory = $true)]
+    [string]$rutaBacpac
     ,
     # [Parameter(Mandatory=$true)]
-    [string]$urlDescarga
+    [string]$urlDescargarBacpac
     ,
-    [bool]$includeSwitch = $false
+    [switch]$includeSwitch = $false
     ,
-    [bool]$includeInstallSqlPackage = $false
+    [switch]$includeInstallSqlPackage = $false
 )
 
 function ImprimirTiempoTranscurrido {
@@ -70,23 +70,25 @@ if ($includeInstallSqlPackage) {
 $NombreBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaDestino)
 $RutaBacpac = $rutaDestino
 Write-Host -ForegroundColor Yellow "Importando $NombreBacpac bacpac descargado"
-Import-D365Bacpac -ImportModeTier1 -BacpacFile $RutaBacpac -NewDatabaseName $NombreBacpac
+# Import-D365Bacpac -ImportModeTier1 -BacpacFile $RutaBacpac -NewDatabaseName $NombreBacpac
 ImprimirTiempoTranscurrido("Bacpac importado")
 
-Write-Host -ForegroundColor Yellow "Deteniendo los servicios de D365"
-Stop-D365Environment
+if ($includeSwitch) {
+    Write-Host -ForegroundColor Yellow "Deteniendo los servicios de D365"
+    Stop-D365Environment
 
-if ((Get-D365Database -Name AXDB_ORIGINAL).Count -gt 0)
-{
-    Remove-D365Database -DatabaseName AxDB_original
+    [int]$AxDB_Original= (Get-D365Database -Name AXDB_ORIGINAL | Measure-Object).Count
+    if ($AxDB_Original -gt 0) {
+        Remove-D365Database -DatabaseName AxDB_original
+    }
+
+    Switch-D365ActiveDatabase -SourceDatabaseName $NombreBacpac
+    Write-Host -ForegroundColor Yellow "Iniciando los servicios de D365"
+    Start-D365Environment -Aos -Batch
+    Write-Host -ForegroundColor Yellow "Sincronizando database"
+    Invoke-D365DbSync
+    ImprimirTiempoTranscurrido("DB sincronizada")
 }
-
-Switch-D365ActiveDatabase -SourceDatabaseName $NombreBacpac
-Write-Host -ForegroundColor Yellow "Iniciando los servicios de D365"
-Start-D365Environment -Aos -Batch
-Write-Host -ForegroundColor Yellow "Sincronizando database"
-Invoke-D365DbSync
-ImprimirTiempoTranscurrido("DB sincronizada")
 
 # Guarda la marca de tiempo de finalización
 $fin = Get-Date
