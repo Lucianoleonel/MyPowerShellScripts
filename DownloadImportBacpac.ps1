@@ -28,16 +28,16 @@ Write-Host "Inicio: $inicio"
 
 Import-Module -Name d365fo.tools
 
-# Verificar si $urlDescarga o $rutaDestino están vacíos
+# Verificar si $urlDescarga o $rutaBacpac están vacíos
 if ([string]::IsNullOrEmpty($urlDescarga) -eq $false) {
     # Descargar el archivo desde la URL proporcionada
     Write-Host -ForegroundColor Yellow "Descargando bacpac"
-    Invoke-WebRequest -Uri $urlDescarga -OutFile $rutaDestino
+    Invoke-WebRequest -Uri $urlDescarga -OutFile $rutaBacpac
     ImprimirTiempoTranscurrido("Descargado el bacpac")
 }
 
 # Quitar la marca "unblock" del archivo descargado
-Unblock-File -Path $rutaDestino
+Unblock-File -Path $rutaBacpac
 
 # PARA PROBAR MAS ADELANTE
 $toolsList = dotnet tool list -g
@@ -50,10 +50,18 @@ if ($toolsList -match "SqlPackage") {
     dotnet tool install microsoft.sqlpackage -g $SqlPackagePath
 }
 
-$NombreBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaDestino)
-$RutaBacpac = $rutaDestino
+# Limpio tablas para agilizar el import
+$CarpetaBacpac = [System.IO.Path]::GetDirectoryName($rutaBacpac)
+$NombreSinExtensionBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaBacpac)
+$RutaBacpacCleaned = Join-Path $CarpetaBacpac -ChildPath "$NombreSinExtensionBacpac.cleaned.bacpac"
+[string[]] $tablesToClear = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG"
+$tablesToClear += "dbo.AXXTAXFILE*"
+[string[]] $tablesToClear = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", "dbo.AXXTAXFILE*"
+Clear-D365BacpacTableData -Path $rutaBacpac -Table "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG" -OutputPath $RutaBacpacCleaned
+
+$NombreBacpac = [System.IO.Path]::GetFileNameWithoutExtension($RutaBacpacCleaned)
 Write-Host -ForegroundColor Yellow "Importando $NombreBacpac bacpac descargado"
-# Import-D365Bacpac -ImportModeTier1 -BacpacFile $RutaBacpac -NewDatabaseName $NombreBacpac
+Import-D365Bacpac -ImportModeTier1 -BacpacFile $RutaBacpacCleaned -NewDatabaseName $NombreBacpac
 ImprimirTiempoTranscurrido("Bacpac importado")
 
 if ($includeSwitch) {
