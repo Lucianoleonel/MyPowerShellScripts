@@ -39,33 +39,16 @@ if ([string]::IsNullOrEmpty($urlDescarga) -eq $false) {
 # Quitar la marca "unblock" del archivo descargado
 Unblock-File -Path $rutaDestino
 
-# Invoke-D365InstallAzCopy
-
-# Primero borro la carpeta
-if ($includeInstallSqlPackage) {
-    $rutaSqlPackage = "C:\Temp\d365fo.tools\SqlPackage"
-    if (Test-Path $rutaSqlPackage -PathType Container) {
-        Write-Host -ForegroundColor Yellow "Borrando SqlPackage encontrado"
-        Remove-Item -Path $rutaSqlPackage -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    # Descarga e instalación de SqlPackage
-    # Version number: 162.1.167
-    # Build number: 162.1.167
-    # Release date: October 19, 2023
-    Write-Host -ForegroundColor Yellow "Instalando SqlPackage"
-    Invoke-D365InstallSqlPackage -SkipExtractFromPage -Url "https://go.microsoft.com/fwlink/?linkid=2249738" -ErrorAction SilentlyContinue
-    ImprimirTiempoTranscurrido("Instalado el SqlPackage")
-}
-
 # PARA PROBAR MAS ADELANTE
-# $toolsList = dotnet tool list -g
-# if ($toolsList -match "SqlPackage") {
-#     Write-Host "SqlPackage está instalado. Usando 'dotnet tool update -g SqlPackage' para instalarlo."
-#     dotnet tool update -g microsoft.sqlpackage
-# } else {
-#     Write-Host "SqlPackage no está instalado. Usando 'dotnet tool install -g SqlPackage' para instalarlo."
-#     dotnet tool install -g microsoft.sqlpackage
-# }
+$toolsList = dotnet tool list -g
+if ($toolsList -match "SqlPackage") {
+    Write-Host "SqlPackage está instalado. Usando 'dotnet tool update -g SqlPackage' para instalarlo."
+    dotnet tool update -g microsoft.sqlpackage
+} else {
+    $SqlPackagePath = 'C:\Temp\d365fo.tools\SqlPackage'
+    Write-Host "SqlPackage no está instalado. Usando 'dotnet tool install SqlPackage -g $SqlPackagePath' para instalarlo."
+    dotnet tool install microsoft.sqlpackage -g $SqlPackagePath
+}
 
 $NombreBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaDestino)
 $RutaBacpac = $rutaDestino
