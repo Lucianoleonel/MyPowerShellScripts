@@ -8,6 +8,10 @@ param (
     [switch]$includeSwitch = $false
     ,
     [switch]$includeInstallSqlPackage = $false
+    ,
+    [switch]$skipBuildModels = $false
+    ,
+    [switch]$reinstallCsu = $false
 )
 
 function ImprimirTiempoTranscurrido {
@@ -21,6 +25,8 @@ function ImprimirTiempoTranscurrido {
     # Imprime las marcas de tiempo y el tiempo transcurrido
     Write-Host -ForegroundColor Green "$mensaje, Tiempo transcurrido : $tiempoTranscurrido"
 }
+
+.\CheckGitRepoUpdated.ps1 . # el . representa el directorio actual
 
 # Guarda la marca de tiempo de inicio
 $inicio = Get-Date
@@ -39,46 +45,63 @@ if ([string]::IsNullOrEmpty($urlDescarga) -eq $false) {
 # Quitar la marca "unblock" del archivo descargado
 Unblock-File -Path $rutaBacpac
 
-# PARA PROBAR MAS ADELANTE
-$toolsList = dotnet tool list -g
-if ($toolsList -match "SqlPackage") {
-    Write-Host "SqlPackage está instalado. Usando 'dotnet tool update -g SqlPackage' para instalarlo."
-    dotnet tool update -g microsoft.sqlpackage
-} else {
-    $SqlPackagePath = 'C:\Temp\d365fo.tools\SqlPackage'
-    Write-Host "SqlPackage no está instalado. Usando 'dotnet tool install SqlPackage -g $SqlPackagePath' para instalarlo."
-    dotnet tool install microsoft.sqlpackage -g $SqlPackagePath
+# Primero borro la carpeta
+if ($includeInstallSqlPackage) {
+    $rutaSqlPackage = "C:\Temp\d365fo.tools\SqlPackage"
+    if (Test-Path $rutaSqlPackage -PathType Container) {
+        Write-Host -ForegroundColor Yellow "Borrando SqlPackage encontrado"
+        Remove-Item -Path $rutaSqlPackage -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    # Descarga e instalación de SqlPackage
+    # Version number: 162.1.167
+    # Build number: 162.1.167
+    # Release date: October 19, 2023
+    Write-Host -ForegroundColor Yellow "Instalando SqlPackage"
+    Invoke-D365InstallSqlPackage -SkipExtractFromPage -Url "https://go.microsoft.com/fwlink/?linkid=2249738" -ErrorAction SilentlyContinue
+    ImprimirTiempoTranscurrido("Instalado el SqlPackage")
 }
+# PARA PROBAR MAS ADELANTE
+######################################
+# NO ESTA FUNCIONANDO EL DOTNET TOOL #
+######################################
+# $toolsList = dotnet tool list -g
+# if ($toolsList -match "SqlPackage") {
+#     Write-Host "SqlPackage está instalado. Usando 'dotnet tool update -g SqlPackage' para instalarlo."
+#     dotnet tool update -g microsoft.sqlpackage
+# } else {
+#     $SqlPackagePath = 'C:\Temp\d365fo.tools\SqlPackage'
+#     Write-Host "SqlPackage no está instalado. Usando 'dotnet tool install SqlPackage -g $SqlPackagePath' para instalarlo."
+#     dotnet tool install microsoft.sqlpackage -g $SqlPackagePath
+# }
 
 # Limpio tablas para agilizar el import
-$CarpetaBacpac = [System.IO.Path]::GetDirectoryName($rutaBacpac)
-$NombreSinExtensionBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaBacpac)
-$RutaBacpacCleaned = Join-Path $CarpetaBacpac -ChildPath "$NombreSinExtensionBacpac.cleaned.bacpac"
-[string[]] $tablesToClear = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG"
-$tablesToClear += "dbo.AXXTAXFILE*"
-[string[]] $tablesToClear = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", "dbo.AXXTAXFILE*"
-Clear-D365BacpacTableData -Path $rutaBacpac -Table "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG" -OutputPath $RutaBacpacCleaned
-
-$NombreBacpac = [System.IO.Path]::GetFileNameWithoutExtension($RutaBacpacCleaned)
-Write-Host -ForegroundColor Yellow "Importando $NombreBacpac bacpac descargado"
-Import-D365Bacpac -ImportModeTier1 -BacpacFile $RutaBacpacCleaned -NewDatabaseName $NombreBacpac
-ImprimirTiempoTranscurrido("Bacpac importado")
+.\CleanBacpac.ps1 -rutaBacpac $rutaBacpac
 
 if ($includeSwitch) {
     Write-Host -ForegroundColor Yellow "Deteniendo los servicios de D365"
     Stop-D365Environment
 
-    [int]$AxDB_Original= (Get-D365Database -Name AXDB_ORIGINAL | Measure-Object).Count
+    [int]$AxDB_Original = (Get-D365Database -Name AXDB_ORIGINAL | Measure-Object).Count
     if ($AxDB_Original -gt 0) {
         Remove-D365Database -DatabaseName AxDB_original
     }
 
     Switch-D365ActiveDatabase -SourceDatabaseName $NombreBacpac
     Write-Host -ForegroundColor Yellow "Iniciando los servicios de D365"
+    if ($skipBuildModels) {
+        Invoke-D365ProcessModule -Module "DevAx*" -ExecuteCompile
+        Invoke-D365ProcessModule -Module "FamiliaBercomat" -ExecuteCompile
+    }
+    Write-Host -ForegroundColor Yellow "Iniciando los servicios de D365 Aos y Batch"
     Start-D365Environment -Aos -Batch
     Write-Host -ForegroundColor Yellow "Sincronizando database"
     Invoke-D365DbSync
     ImprimirTiempoTranscurrido("DB sincronizada")
+}
+
+if ($reinstallCsu) {
+    [System.Environment]::MachineName
+    ..\CommerceStoreScaleUnitSetupInstaller\InstallScaleUnit.ps1 ..\CommerceStoreScaleUnitSetupInstaller\ConfigFiles\
 }
 
 # Guarda la marca de tiempo de finalización

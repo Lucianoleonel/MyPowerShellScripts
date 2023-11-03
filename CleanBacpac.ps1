@@ -11,10 +11,23 @@ Write-Host "Inicio: $inicio"
 $CarpetaBacpac = [System.IO.Path]::GetDirectoryName($rutaBacpac)
 $NombreSinExtensionBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaBacpac)
 $RutaBacpacCleaned = Join-Path $CarpetaBacpac -ChildPath "$NombreSinExtensionBacpac.cleaned.bacpac"
-[string[]] $tablesToClear = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG"
-$tablesToClear += "dbo.AXXTAXFILE*"
-[string[]] $tablesToClear = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", "dbo.AXXTAXFILE*"
-Clear-D365BacpacTableData -Path $rutaBacpac -Table "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG" -OutputPath $RutaBacpacCleaned
+# Lista de tablas a limpiar
+[string[]] $tableList = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", 'AxxTaxFile*', '*Staging' 
+# Lista de tablas a excluir de la limpieza
+[string[]] $tablesToExclude = "dbo.AXXTAXFILEPARAMETERS", "dbo.AXXTAXFILEPARAMETERS"
+$tablesToClear = Get-D365BacpacTable -Path $rutaBacpac -Table $tableList 
+    | Where-Object { $_.Name -notin $tablesToExclude }
+    | Select-Object -ExpandProperty Name
+
+Write-Host -ForegroundColor Yellow "Tablas a limpiar"
+$tablesToClear | ForEach-Object {
+    Write-Host "    "$_
+}
+Write-Host -ForegroundColor Yellow "Executando limpieza"
+if (Test-Path $RutaBacpacCleaned -PathType Any) {
+    Remove-Item -Path $RutaBacpacCleaned
+}
+Clear-D365BacpacTableData -Path $rutaBacpac -Table $tablesToClear -OutputPath $RutaBacpacCleaned
 
 # Guarda la marca de tiempo de finalización
 $fin = Get-Date
@@ -22,4 +35,4 @@ $fin = Get-Date
 Write-Host "Inicio: $inicio"
 Write-Host "Final: $fin"
 $tiempoTranscurrido = $fin - $inicio
-Write-Host -ForegroundColor Magenta "Tiempo total transcurrido: $tiempoTranscurrido"
+Write-Host -ForegroundColor Green "Tiempo limpieza bacpac transcurrido: $tiempoTranscurrido"
