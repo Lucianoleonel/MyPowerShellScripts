@@ -32,6 +32,8 @@ function ImprimirTiempoTranscurrido {
 $inicio = Get-Date
 Write-Host "Inicio: $inicio"
 
+.\InstallOrUpdateD365foTools.ps1
+
 Import-Module -Name d365fo.tools
 
 # Verificar si $urlDescarga o $rutaBacpac están vacíos
