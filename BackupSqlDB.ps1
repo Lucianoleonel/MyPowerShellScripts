@@ -12,6 +12,7 @@ if ([string]::IsNullOrEmpty($ExtraDescription) ){
     $backupfile += ".bak"
 }
 else {
+    $ExtraDescription = $ExtraDescription.Replace(" ", "");
     $backupfile += "_$ExtraDescription.bak"
 }
 Write-Host -ForegroundColor Green $backupfile
