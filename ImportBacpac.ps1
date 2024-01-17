@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param (
     [Parameter(Mandatory = $true)]
     [string]$rutaBacpac
@@ -14,6 +15,8 @@ param (
     [switch]$reinstallCsu = $false
     ,
     [switch]$skipCheckGitRepoUpdated = $false
+    ,
+    [int] $MaxParallelism = 8
 )
 
 function ImprimirTiempoTranscurrido {
@@ -36,8 +39,10 @@ if (!$skipCheckGitRepoUpdated) {
 $inicio = Get-Date
 Write-Host "Inicio: $inicio"
 
+Write-Host "Instalando o actualizando modulo d365fo.tools"
 .\InstallOrUpdateD365foTools.ps1
 
+Write-Host "Importando modulo d365fo.tools"
 Import-Module -Name d365fo.tools
 
 # TODO Descartar este bloque para descargar. Luego implementaremos AzCopy
@@ -61,52 +66,68 @@ if ($includeInstallSqlPackage) {
     Write-Host -ForegroundColor Yellow "Instalando SqlPackage"
     $SqlPackagePath = 'C:\Temp\d365fo.tools\SqlPackage'
     Invoke-D365InstallSqlPackage -Path $SqlPackagePath -SkipExtractFromPage -Url "https://go.microsoft.com/fwlink/?linkid=2249738"
-    ImprimirTiempoTranscurrido("Instalado el SqlPackage")
+    ImprimirTiempoTranscurrido("SqlPackage instalado")
 }
 
 # Limpio tablas para agilizar el import
-$rutaBacpacCleaned = .\CleanBacpac.ps1 -rutaBacpac $rutaBacpac
-# Obtengo el nuevo path del bacpac limpio y extraigo el nombre de importación
+.\CleanBacpac.ps1 -rutaBacpac $rutaBacpac
 $ImportedDatabaseName = [System.IO.Path]::GetFileNameWithoutExtension($rutaBacpac)
-# Ejecuto la importación
 
 try {
     if (-not (Test-Path -Path $rutaBacpacCleaned -PathType Leaf)) {
         throw [System.IO.FileNotFoundException] $rutaBacpacCleaned
     }
-    Write-Host -ForegroundColor Yellow "Iniciando la importación de la base $ImportedDatabaseName con el archivo $rutaBacpacCleaned"
-    $importResult = Import-D365Bacpac -ImportModeTier1 -BacpacFile "$rutaBacpacCleaned" -NewDatabaseName $ImportedDatabaseName
-    $importResult
+
+    #uso una variable para guardar el mensaje a imprimir para poder reusarla en el catch
+    $pasoActual = "Iniciando la importación de la base $ImportedDatabaseName con el archivo '$rutaBacpacCleaned'"
+    # Ejecuto la importación
+    Write-Host -ForegroundColor Yellow $pasoActual
+    # Import-D365Bacpac -ImportModeTier1 -BacpacFile $rutaBacpacCleaned -NewDatabaseName $ImportedDatabaseName -MaxParallelism $MaxParallelism
+    ImprimirTiempoTranscurrido("Bacpac importado")
 
     if ($includeSwitch) {
-        Write-Host -ForegroundColor Yellow "Deteniendo los servicios de D365"
+        $pasoActual = "Switcheando bases, deteniendo los servicios"
+        Write-Host -ForegroundColor Yellow $pasoActual
         Stop-D365Environment
 
         [int]$AxDB_Original = (Get-D365Database -Name AXDB_ORIGINAL | Measure-Object).Count
         if ($AxDB_Original -gt 0) {
+            $pasoActual = "Switcheando bases, removiendo AxDB_original"
+            Write-Host -ForegroundColor Yellow $pasoActual
             Remove-D365Database -DatabaseName AxDB_original
         }
+        ImprimirTiempoTranscurrido("AxDB switcheadas")
 
-        Switch-D365ActiveDatabase -SourceDatabaseName $NombreBacpac
+        Switch-D365ActiveDatabase -SourceDatabaseName $ImportedDatabaseName
         if (!$skipBuildModels) {
-            Write-Host -ForegroundColor Yellow "Compilando los módulos DevAx* FamiliaBercomat"
+            $pasoActual = "Compilando los módulos DevAx* FamiliaBercomat"
+            Write-Host -ForegroundColor Yellow $pasoActual
             Invoke-D365ProcessModule -Module "DevAx*" -ExecuteCompile
             Invoke-D365ProcessModule -Module "FamiliaBercomat" -ExecuteCompile
+            ImprimirTiempoTranscurrido("Compilación terminada")
         }
-        Write-Host -ForegroundColor Yellow "Iniciando los servicios de D365 Aos y Batch"
+
+        $pasoActual = "Iniciando servicios"
+        Write-Host -ForegroundColor Yellow $pasoActual
         Start-D365Environment -Aos -Batch
-        Write-Host -ForegroundColor Yellow "Sincronizando database"
+        
+        $pasoActual = "Sincronizando database"
+        Write-Host -ForegroundColor Yellow $pasoActual
         Invoke-D365DbSync
         ImprimirTiempoTranscurrido("DB sincronizada")
     }
 
-    if ($reinstallCsu) {
-        [System.Environment]::MachineName
-        ..\CommerceStoreScaleUnitSetupInstaller\InstallScaleUnit.ps1 ..\CommerceStoreScaleUnitSetupInstaller\ConfigFiles\
-    }
+    # TODO Falta implementar
+    # if ($reinstallCsu) {
+    #     [System.Environment]::MachineName
+    #     ..\CommerceStoreScaleUnitSetupInstaller\InstallScaleUnit.ps1 ..\CommerceStoreScaleUnitSetupInstaller\ConfigFiles\
+    #     ImprimirTiempoTranscurrido("CSU con extensiones reinstalado")
+    # }
 }
 catch {
-    Write-Host -ForegroundColor Red "Error desde la limpieza en adelante: $_.Exception.Message"
+    Write-Host -ForegroundColor Red "Error desde el paso:"
+    Write-Host -ForegroundColor Red "`t$pasoActual"
+    Write-Host -ForegroundColor Red "`t$_.Exception.Message"
 }
 
 # Guarda la marca de tiempo de finalización

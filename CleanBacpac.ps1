@@ -6,12 +6,8 @@ param (
 # Guarda la marca de tiempo de inicio
 $inicio = Get-Date
 Write-Host "Inicio: $inicio"
+Write-Host -ForegroundColor Yellow "Limpiando el bacpac $rutaBacpac"
 
-# Limpio tablas para agilizar el import
-$CarpetaBacpac = [System.IO.Path]::GetDirectoryName($rutaBacpac)
-$NombreSinExtensionBacpac = [System.IO.Path]::GetFileNameWithoutExtension($rutaBacpac)
-# [string] $RutaBacpacCleaned = Join-Path $CarpetaBacpac -ChildPath "$NombreSinExtensionBacpac.cleaned.bacpac"
-$RutaBacpacCleaned = Join-Path $CarpetaBacpac -ChildPath "$NombreSinExtensionBacpac.cleaned.bacpac"
 # Lista de tablas a limpiar
 [string[]] $tableList = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", 'AxxTaxFile*', '*Staging', "SMMTransLog"
 # Lista de tablas a excluir de la limpieza
@@ -22,13 +18,11 @@ $tablesToClear = Get-D365BacpacTable -Path $rutaBacpac -Table $tableList |
 
 Write-Host -ForegroundColor Yellow "Tablas a limpiar"
 $tablesToClear | ForEach-Object {
-    Write-Host "    "$_
+    Write-Host "`t$_"
 }
-# Write-Host -ForegroundColor Yellow "Executando limpieza"
-# if (Test-Path $RutaBacpacCleaned -PathType Any) {
-#     Remove-Item -Path $RutaBacpacCleaned
-# }
-# Clear-D365BacpacTableData -Path $rutaBacpac -Table $tablesToClear -OutputPath $RutaBacpacCleaned
+
+Write-Host -ForegroundColor Yellow "Executando limpieza"
+Clear-D365BacpacTableData -Path $rutaBacpac -Table $tablesToClear -ClearFromSource
 
 # Guarda la marca de tiempo de finalización
 $fin = Get-Date
@@ -37,5 +31,3 @@ Write-Host "Inicio: $inicio"
 Write-Host "Final: $fin"
 $tiempoTranscurrido = $fin - $inicio
 Write-Host -ForegroundColor Green "Tiempo limpieza bacpac transcurrido: $tiempoTranscurrido"
-
-Write-Output $RutaBacpacCleaned
