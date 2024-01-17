@@ -74,15 +74,15 @@ if ($includeInstallSqlPackage) {
 $ImportedDatabaseName = [System.IO.Path]::GetFileNameWithoutExtension($rutaBacpac)
 
 try {
-    if (-not (Test-Path -Path $rutaBacpacCleaned -PathType Leaf)) {
-        throw [System.IO.FileNotFoundException] $rutaBacpacCleaned
+    if (-not (Test-Path -Path $rutaBacpac -PathType Leaf)) {
+        throw [System.IO.FileNotFoundException] $rutaBacpac
     }
 
     #uso una variable para guardar el mensaje a imprimir para poder reusarla en el catch
-    $pasoActual = "Iniciando la importación de la base $ImportedDatabaseName con el archivo '$rutaBacpacCleaned'"
+    $pasoActual = "Iniciando la importación de la base $ImportedDatabaseName con el archivo '$rutaBacpac'"
     # Ejecuto la importación
     Write-Host -ForegroundColor Yellow $pasoActual
-    # Import-D365Bacpac -ImportModeTier1 -BacpacFile $rutaBacpacCleaned -NewDatabaseName $ImportedDatabaseName -MaxParallelism $MaxParallelism
+    Import-D365Bacpac -ImportModeTier1 -BacpacFile $rutaBacpac -NewDatabaseName $ImportedDatabaseName -MaxParallelism $MaxParallelism
     ImprimirTiempoTranscurrido("Bacpac importado")
 
     if ($includeSwitch) {
