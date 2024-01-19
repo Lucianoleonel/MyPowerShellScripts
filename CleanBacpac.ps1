@@ -9,17 +9,22 @@ Write-Host "Inicio: $inicio"
 Write-Host -ForegroundColor Yellow "Limpiando el bacpac $rutaBacpac"
 
 # Lista de tablas a limpiar
-[string[]] $tableList = "DOCUHISTORY","EVENTCUD","SYSEXCEPTIONTABLE","DMFSTAGINGLOGDETAILS","SYSENCRYPTIONLOG", "DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", 'AxxTaxFile*', '*Staging', "SMMTransLog"
+[string[]] $tableList = @("DOCUHISTORY", "EVENTCUD", "DMFSTAGINGLOGDETAILS", "SYSEXCEPTIONTABLE", "SYSENCRYPTIONLOG", "SMMTransLog")
+$tableList += @("BATCH", "BATCHCONSTRAINTS", "BATCHCONSTRAINTSHISTORY", "BATCHHISTORY", "BATCHJOB", "BATCHJOBALERTS", "BATCHJOBHISTORY")
+$tableList += @("DEVAXCMMRTSLOGTABLE", "FBMPRICEDISCTABLEINTERFACE", "AXXDOCEINVOICELOG", 'AxxTaxFile*', '*Staging')
 # Lista de tablas a excluir de la limpieza
-[string[]] $tablesToExclude = "dbo.AXXTAXFILEPARAMETERS", "dbo.AXXTAXFILEPARAMETERS"
+[string[]] $tablesToExclude = @("dbo.AXXTAXFILEPARAMETERS", "dbo.OTRAS_TABLAS")
 $tablesToClear = Get-D365BacpacTable -Path $rutaBacpac -Table $tableList
 $tablesToClear = $tablesToClear | Where-Object { $_.Name -notin $tablesToExclude }
 
 if ($tablesToClear.Length -gt 0) {
     Write-Host -ForegroundColor Yellow "Tablas a limpiar"
     $tablesToClear
+    $sumOriginalSize = ($tablesToClear | Measure-Object OriginalSize -Sum).Sum / 1GB
+    $sumOriginalSizeGB = "Total Original Size {0:N2} GB" -f $sumOriginalSize
+    Write-Host -ForegroundColor Green $sumOriginalSizeGB
     $tablesToClear = $tablesToClear | Select-Object -ExpandProperty Name
-        
+
     Write-Host -ForegroundColor Yellow "Executando limpieza"
     Clear-D365BacpacTableData -Path $rutaBacpac -Table $tablesToClear -ClearFromSource
 }
