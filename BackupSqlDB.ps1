@@ -5,9 +5,12 @@ param (
     ,
     [string]
     $Database = "AxDB"
+    ,
+    [string]
+    $TargetPath = "J:\MSSQL_BACKUP"
 )
 
-$backupfile = "J:\MSSQL_BACKUP\$Database-$env:computername-$(Get-Date -format "yyyyMMdd-HHmm")"
+$backupfile = "$TargetPath\$Database-$env:computername-$(Get-Date -format "yyyyMMdd-HHmm")"
 if ([string]::IsNullOrEmpty($ExtraDescription) ){
     $backupfile += ".bak"
 }
