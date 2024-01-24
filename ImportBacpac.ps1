@@ -59,13 +59,19 @@ Unblock-File -Path $rutaBacpac
 
 # Descarga e instalación de SqlPackage
 if ($includeInstallSqlPackage) {
-    # Descarga e instalación de SqlPackage
-    # Version number: 162.1.167
-    # Build number: 162.1.167
-    # Release date: October 19, 2023
     Write-Host -ForegroundColor Yellow "Instalando SqlPackage"
     $SqlPackagePath = 'C:\Temp\d365fo.tools\SqlPackage'
-    Invoke-D365InstallSqlPackage -Path $SqlPackagePath -SkipExtractFromPage -Url "https://go.microsoft.com/fwlink/?linkid=2249738"
+
+    # # Version number: 162.1.167
+    # # Build number: 162.1.167
+    # # Release date: October 19, 2023
+    # Invoke-D365InstallSqlPackage -Path $SqlPackagePath -SkipExtractFromPage -Url "https://go.microsoft.com/fwlink/?linkid=2249738"
+
+    # Version number: 162.1.172
+    # Build number: 162.1.172.1
+    # Release date: January 9, 2024
+    dotnet tool install microsoft.sqlpackage --tool-path $SqlPackagePath --add-source https://api.nuget.org/v3/index.json
+    
     ImprimirTiempoTranscurrido("SqlPackage instalado")
 }
 
