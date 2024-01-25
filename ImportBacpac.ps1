@@ -109,7 +109,7 @@ try {
 
         $pasoActual = "Iniciando servicios"
         Write-Host -ForegroundColor Yellow $pasoActual
-        Start-D365Environment -Aos -Batch
+        Start-D365EnvironmentV2 -Aos -Batch
         
         $pasoActual = "Sincronizando database"
         Write-Host -ForegroundColor Yellow $pasoActual
