@@ -66,11 +66,12 @@ if ($includeInstallSqlPackage) {
     # # Build number: 162.1.167
     # # Release date: October 19, 2023
     # Invoke-D365InstallSqlPackage -Path $SqlPackagePath -SkipExtractFromPage -Url "https://go.microsoft.com/fwlink/?linkid=2249738"
+    Invoke-D365InstallSqlPackage
 
     # Version number: 162.1.172
     # Build number: 162.1.172.1
     # Release date: January 9, 2024
-    dotnet tool install microsoft.sqlpackage --tool-path $SqlPackagePath --add-source https://api.nuget.org/v3/index.json
+    # dotnet tool install microsoft.sqlpackage --tool-path $SqlPackagePath --add-source https://api.nuget.org/v3/index.json
     
     ImprimirTiempoTranscurrido("SqlPackage instalado")
 }

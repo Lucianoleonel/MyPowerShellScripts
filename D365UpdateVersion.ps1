@@ -1,5 +1,5 @@
 # Definir variables
-$extractedFolderPath = Read-Host -Prompt "Por favor, ingrese la ruta donde se encuentra el archivo (por ejemplo, C:\Axxon\FR.10.0.38)"
+$extractedFolderPath = Read-Host -Prompt "Por favor, ingrese la ruta donde se encuentra el archivo (por ejemplo, C:\Axxon\SU.10.0.38)"
 $runbookID = "$env:COMPUTERNAME-runbook"
 $defaultTopologyPath = $extractedFolderPath + "\DefaultTopologyData.xml"
 $AXUpdateInstaller = $extractedFolderPath + "\AXUpdateInstaller.exe"
