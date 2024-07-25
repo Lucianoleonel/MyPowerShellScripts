@@ -21,7 +21,7 @@ function Enable-WindowsFeatureIfNotEnabled {
     $feature = Get-WindowsOptionalFeature -Online -FeatureName $FeatureName
     if ($feature.State -ne "Enabled") {
         Write-Host "Habilitando la característica $FeatureName..."
-        Enable-WindowsOptionalFeature -Online -FeatureName $FeatureName -All
+        Enable-WindowsOptionalFeature -Online -FeatureName $FeatureName -All -NoRestart
     } else {
         Write-Host "La característica $FeatureName ya está habilitada."
     }
