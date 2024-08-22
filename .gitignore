@@ -1,1 +1,6 @@
 Test1.ps1
+
+# Excluyendo carpetas
+bin/
+obj/
+.vs/
