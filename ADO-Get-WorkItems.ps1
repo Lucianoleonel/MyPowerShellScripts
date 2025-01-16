@@ -48,14 +48,6 @@ $headers = @{
 }
 
 try {
-	<#
-	$pullRequestInfo = Invoke-WebRequest -Uri ("$baseUrl/pullrequests/$pullRequestId?api-version=7.0") -Method Get -Headers $headers | ConvertFrom-Json
-
-    if ($_.Exception.StatusCode -eq 404) {
-		Write-Error "La pull request '$pullRequestId' no existe. Verifica el ID y los permisos."
-		exit
-	}
-#>
 	
 	# Obtener los work items
 	$response = Invoke-WebRequest -Uri $url -Method Get -Headers $headers | ConvertFrom-Json
